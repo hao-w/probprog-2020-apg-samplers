@@ -306,25 +306,26 @@ Approximating the gradient presents a chicken-and-egg problem; we need samples f
 % Moreover, self-normalized importance samplers are consistent, but they are not unbiased. In the early stages of training, we will have poor quality proposals, which means that the bias of the gradient estimators in Equations~\ref{eq:grad-self-normalized} and~\ref{eq:grad-theta} can be high. 
 %If we can improve the quality of the importance sampling mechanism, regardless of the quality of the proposal, then this will improve accuracy of both inference and gradient estimation.
 %may not be able to compute high-quality gradient estimates until we have good proposals, but we will not be able to learn the proposals without high-quality gradient estimates.
-Reweighted wake-sleep (RWS) methods \cite{le2019revisiting} generate proposals from an encoder $q_\f(z \mid x)$ and compute weights $w = p_\q(x, z) / q_\f(z \mid x)$. Self-normalized importance samplers are consistent, but they are not unbiased. As a result, the weights can have high variance in models with high-dimensional or correlated latent variables, which in turn implies a high bias of the gradient estimator. 
-
-To improve upon RWS methods, we use learned proposals to define a sequential Monte Carlo (SMC) sampler \cite{delmoral2006sequential} (also known as \emph{resample-move} SMC), a subclass of SMC methods \cite{doucet2001sequential} that interleave resampling with application of a transition kernel.
+Reweighted wake-sleep (RWS) methods \cite{le2019revisiting} generate proposals from an encoder $q_\f(z \mid x)$ and compute weights $w = p_\q(x, z) / q_\f(z \mid x)$. Since self-normalized importance samplers are biased, the weights can have high variance in models with high-dimensional or correlated latent variables, which in turn implies a high bias of the gradient estimator. To improve upon RWS methods, we use learned proposals to define a sequential Monte Carlo (SMC) sampler \cite{delmoral2006sequential} (\emph{resample-move} SMC), a subclass of SMC methods \cite{doucet2001sequential} that interleave resampling with application of a transition kernel.
 
 % SMC methods \cite{doucet2001sequential} combine two basic ideas. The first is sequential importance sampling (SIS), which decomposes a proposal for a sequence of variables into a sequence of conditional proposals. The second is resampling, which selects partial proposals with probability proportional to their weights in order to improve the overall sample quality. SMC \emph{samplers} (see  Algorithm~\ref{alg:smcs}) are a subclass of SMC methods that interleave resampling with the application of a transition kernel, which is also referred to as \emph{resample-move} SMC. 
 
-\textbf{Sequential Importance Sampling}. To understand how approximate Gibbs proposals can be used in a SMC sampler, we first define a sequential importance sampler (SIS) that decomposes the importance weight into a sequence of \emph{incremental} weights. In general, SIS considers a sequence of unnormalized target densities $\gamma^1(z^1), \gamma^2(z^{1:2}), \dots, \gamma^K(z^{1:K})$. Consider an initial proposal $q^1(z^1)$, along with a sequence of conditional proposals $q^k(z^k \mid z^{1:k-1})$, which recursively construct a sequence of weights $w^k = v^k w^{k-1}$ by assuming $w^1 = \gamma^1(z^1) / q^1(z^1)$ and defining the incremental weight $v^k$ (see Appendix~\ref{appendix:sis-weight} for proof of correctness)
-\begin{align*}
-    w^k
-    = 
-    v^k w^{k-1}
-    =
-    \frac{\gamma^k(z^{1:k})}
-         {q^1(z^1) \prod_{k'=2}^k q^{k'}(z^{k'} \mid z^{1:k'-1})},
-    \qquad
-    v^k 
-    &=
-    \frac{\gamma^k(z^{1:k})}{\gamma^{k-1}(z^{1:k-1}) q^k(z^k \mid z^{1:k-1})}.
-\end{align*}
+To understand how approximate Gibbs proposals can be used in a SMC sampler, we first define a sequential importance sampler (SIS). Consider a sequence of unnormalized target densities $\gamma^1(z^1), \gamma^2(z^{1:2}), \dots, \gamma^K(z^{1:K})$, along with an initial proposal $q^1(z^1)$ and a sequence of conditional proposals $q^k(z^k \mid z^{1:k-1})$. Define the initial weight $w^1 := v^1 := \gamma^1(z^1) / q^1(z^1)$ and the incremental weight $v^k:=  \gamma^k(z^{1:k}) / \gamma^{k-1}(z^{1:k-1}) q^k(z^k \mid z^{1:k-1})$, which recursively constructs a sequence of weights $w^k = v^k w^{k-1}= \gamma^k(z^{1:k}) / q^1(z^1) \prod_{k'=2}^k q^{k'}(z^{k'} \mid z^{1:k'-1})$.
+
+
+% which recursively construct a sequence of weights $w^k = v^k w^{k-1}$ by assuming (see Appendix~\ref{appendix:sis-weight} for detailed proof)
+% \begin{align*}
+%     w^k
+%     = 
+%     v^k w^{k-1}
+%     =
+%     \frac{\gamma^k(z^{1:k})}
+%          {q^1(z^1) \prod_{k'=2}^k q^{k'}(z^{k'} \mid z^{1:k'-1})},
+%     \qquad
+%     v^k 
+%     &=
+%     \frac{\gamma^k(z^{1:k})}{\gamma^{k-1}(z^{1:k-1}) q^k(z^k \mid z^{1:k-1})}.
+% \end{align*}
 % This construction ensures that, at step $k$ in the sequence, we have a weight $w^k$ relative to the intermediate  density $\gamma^k(z^{1:k})$ of the form (see Appendix~\ref{appendix:sis-weight})
 % \begin{align*}
 %     w^k
@@ -368,10 +369,11 @@ This construction defines a valid importance sampler for \emph{any} choice of pr
     q(z^{k} \mid  z^{k-1})
     .
 \end{align*}
+
 For this choice of kernel, the incremental weights are 1, which minimizes the variance of the weights $w^k$.
 We now use the approximate Gibbs kernel from Equation~\ref{eq:approx-gibbs-kernel} as both the forward and the reverse kernel $q(z^{k} \mid  z^{k-1}) = r(z^{k-1} \mid  z^k) = q_\f(z^k \mid x, z^{k-1})$. When the approximate Gibbs kernel converges to the actual Gibbs kernel, this choice becomes optimal, since the kernel will satisfy detailed balance $p_\q(x, z^k)\,q_\f(z^{k-1} \,|\, x, z^{k}) = p_\q(x, z^{k-1})\,q_\f(z^{k} \,|\, x, z^{k-1})$.
 
-\textbf{Resampling}. In general, the weights $w^k$ in the sequential importance sampling scheme defined above will have a high variance. Moreover, we are now sampling these same variables $k$ times. During training variance of weights $w^k$ will increase with $k$, since we are now jointly sampling an entire Markov chain.
+In general, the weights $w^k$ in the SIS will have a high variance. Moreover, we are now sampling these same variables $k$ times, i.e., jointly sampling the entire Markov chain during train, thus the variance will increase with $k$.
 To overcome this problem, SMC samplers interleave application of the transition kernel with a \emph{resampling} step (see Algorithm~\ref{alg:resample}), which generates a new set of samples by selecting current samples with replacement, with probability proportional to their weight. 
 % Concretely, suppose that we have a set \emph{incoming} samples $\{(w^{k,l}, z^{k,l})\}_{l=1}^L$, then the resampling procedure (see Algorithm~\ref{alg:resample}) selects index $a$ with probability $P(a\!=\!l) = w^{k,l} / \sum_{l'} w^{k,l'}$ and returns an outgoing sample $z'^{k,l} = z^{k,a}$ whose $w'^{k,l} = \frac{1}{L} \sum_l w^{k,l}$ is equal to the average weight. The reduces the variance of the importance weights at the expense of also reducing the diversity of the sample set; high-weight samples are selected frequently, whereas low-weight samples are selected infrequently or not at all.
 We will employ resampling after each block update $q_\f(z_b \mid  x, z_{-b})$, which enables us to compute the gradient estimates using incremental weights $v$ of the form
