@@ -542,7 +542,10 @@ The advantage of this parameterization is it allows us to train approximate Gibb
 \section{Experiments}
 \label{sec:experiments}
 
-We evaluate APG methods in 3 tasks. We begin by considering a Gaussian mixture model (GMM) as an exemplar of a model in the conjugate-exponential family. Here we verify that the learned block updates converge the analytical conditional posteriors as predicted by our analysis in Section~\ref{sec:amortized-gibbs}. We next consider a deep generative mixture model (DGMM) that incorporates a neural likelihood to parameterize ring-shaped clusters. We show that we can train both the generative model and inference model in an end-to-end manner using APG methods, and that inference scales to datasets containing up to 600 points. For both models we quantify performance in terms of the effective sample size (ESS) and the relative magnitude of the log joint. In our third experiment, we consider an unsupervised model for multiple bouncing MNIST data. We extend the task proposed by Srivastava et al.~\cite{srivastava2015unsupervised} to consider up to 5 individual digits, and learn both a deep generative model for videos and an inference model that performs tracking.
+We evaluate APG methods in 3 tasks. We begin by considering a Gaussian mixture model (GMM) as an exemplar of a model in the conjugate-exponential family. Here we verify that the learned block updates converge the analytical conditional posteriors as predicted by our analysis in Section~\ref{sec:amortized-gibbs}. We next consider a deep generative mixture model (DGMM) that incorporates a neural likelihood to parameterize ring-shaped clusters. 
+% We show that we can train both the generative model and inference model in an end-to-end manner using APG methods, and that inference scales to datasets containing up to 600 points. 
+For both models we quantify performance in terms of the effective sample size (ESS) and the relative magnitude of the log joint. 
+In our third experiment, we consider an unsupervised model for multiple bouncing MNIST data. We extend the task proposed by Srivastava et al.~\cite{srivastava2015unsupervised} to consider up to 5 individual digits, and learn both a deep generative model for videos and an inference model that performs tracking.
 \begin{figure*}[t!]
   \centering
   \begin{subfigure}[t]{0.5\textwidth}
@@ -574,8 +577,7 @@ We evaluate APG methods in 3 tasks. We begin by considering a Gaussian mixture m
 \setlength{\tabcolsep}{2pt}
 \begin{table*}[t!]
     \centering
-    \caption{APG performance in the GMM and DGMM.
-    The left column in each table shows the change in log joint distribution, i.e. the difference between the log joint in the baseline and the log joint in other models. We compute the ESS/L metric is computed w.r.t.~different variable blocks. For the GMM we additionally report the inclusive KL (Equation~\ref{eq:variational_objective}) for each block.}
+    \caption{Quantitative results in GMM (\ref{table-gmm}) and DGMM (\ref{table-dgmm}) by computing (i) the difference between the log joint in the baseline and that in APG, and (ii) the ESS/L w.r.t. each block update. In GMM we additionally report the inclusive KL.}
     \begin{subtable}{.4\linewidth}
     \centering
     \caption{GMM}
@@ -596,7 +598,7 @@ We evaluate APG methods in 3 tasks. We begin by considering a Gaussian mixture m
      APG (K=10) & 211.9 & 0.398 & 0.981  & 0.760
      & 0.004 & 0.004
      \\
-     APG (K=15) & 215.2 & 0.416 & 0.983 & 0.780 & 0.003 & 0.004\\
+    %  APG (K=15) & 215.2 & 0.416 & 0.983 & 0.780 & 0.003 & 0.004\\
     \bottomrule
     \end{tabular}   
     \label{table-gmm}
@@ -615,14 +617,14 @@ We evaluate APG methods in 3 tasks. We begin by considering a Gaussian mixture m
     -- & 0.001 & -- & --\\
     6201 & 0.002 & 0.013 & 0.422 \\
     6293 & 0.002 & 0.019 & 0.454 \\
-    6310 & 0.003 & 0.025 & 0.488 \\
+    % 6310 & 0.003 & 0.025 & 0.488 \\
     \bottomrule
     \end{tabular}
     \label{table-dgmm}
     \end{subtable}
     \label{table-both-mm}
 \end{table*}
-Results on each of these tasks constitute a significant advance relative to the state of the art. Standard VAEs perform poorly at Gaussian mixture modeling tasks, and to our knowledge there are no existing methods that scale to a problem of the complexity of the DGMM for rings. In the context of the unsupervised tracking model, APG easily scales beyond previously reported results for a specialized recurrent architecture \cite{kosiorek2018sequential}. APG is not only is able to scale to models with higher complexity in these settings, but also provides a general framework for performing inference in models with global and local variables, which can be adapted to a variety of model classes with comparative ease.
+% Results on each of these tasks constitute a significant advance relative to the state of the art. Standard VAEs perform poorly at Gaussian mixture modeling tasks, and to our knowledge there are no existing methods that scale to a problem of the complexity of the DGMM for rings. In the context of the unsupervised tracking model, APG easily scales beyond previously reported results for a specialized recurrent architecture \cite{kosiorek2018sequential}. APG is not only is able to scale to models with higher complexity in these settings, but also provides a general framework for performing inference in models with global and local variables, which can be adapted to a variety of model classes with comparative ease.
 
 \subsection{Gaussian Mixture Model}
 \label{sec:gmm}
@@ -630,32 +632,28 @@ Results on each of these tasks constitute a significant advance relative to the 
 To evaluate whether APG samplers can learn the exact Gibbs updates in conditionally conjugate models, we consider a Gaussian mixture model 
 \begin{align*}
     \mu_i, \tau_i \sim \text{NormGamma}(\mu_0, \nu_0, \alpha_0, \beta_0)
-    , i &=1,2..,I \\
-    c_n \sim \mathrm{Cat}(\pi), 
-    x_n | c_n\!=\!i \sim \text{Norm}(\mu_i, 1 / \tau_i)
-    ,n &=1,2,..,N
-\end{align*}
-In this model, the global variables $z^\textsc{g} = \{\mu_{1:I}, \tau_{1:I}\}$ are the mean an precision for each mixture component, whereas the local variables are the cluster assignments $z^\textsc{l} = \{c_{1:N}\}$. Conditioned on cluster assignments, the Gaussian likelihood $p(\x_{1:N} \mid z_{1:N}, \mu_{1:I}, \tau_{1:I})$ is conjugate to a normal-gamma prior $p(\mu_{1:I}, \tau_{1:I})$ with sufficient statistics $T(x_n, c_n)$ 
-\begin{align*}
-    \Big\{\mathrm{I}[c_n \!=\! i], 
-        ~\mathrm{I}[c_n \!=\! i] \: x_n, 
-        ~\mathrm{I}[c_n \!=\! i] \: x_n^2 
-        ~\Big\vert~ i \!=\! 1,2,\dots,I 
-    \Big\}
     ,
+    \quad
+    c_n \sim \mathrm{Cat}(\pi)
+    ,
+    \quad
+    x_n | c_n\!=\!i \sim \text{Norm}(\mu_i, 1 / \tau_i)
+    .
 \end{align*}
-where $\mathrm{I}[z_n \!=\! i]$ is an indicator function that evaluates to 1 if the equality holds, and 0 otherwise.
+% In this model, the global variables $z^\textsc{g} = \{\mu_{1:I}, \tau_{1:I}\}$ are the mean an precision for each mixture component, whereas the local variables are the cluster assignments $z^\textsc{l} = \{c_{1:N}\}$. Conditioned on cluster assignments, the Gaussian likelihood $p(\x_{1:N} \mid z_{1:N}, \mu_{1:I}, \tau_{1:I})$ is conjugate to a normal-gamma prior $p(\mu_{1:I}, \tau_{1:I})$ with sufficient statistics $T(x_n, c_n)$ 
+% \begin{align*}
+%     \Big\{\mathrm{I}[c_n \!=\! i], 
+%         ~\mathrm{I}[c_n \!=\! i] \: x_n, 
+%         ~\mathrm{I}[c_n \!=\! i] \: x_n^2 
+%         ~\Big\vert~ i \!=\! 1,2,\dots,I 
+%     \Big\}
+%     ,
+% \end{align*}
+% where $\mathrm{I}[z_n \!=\! i]$ is an indicator function that evaluates to 1 if the equality holds, and 0 otherwise.
 
-We employ a variational distribution that updates the global variables $q_\f(\mu, \tau \mid x, c)$ and the local variables $q_\f(c \mid x, \mu, \tau)$, using point-wise neural sufficient statistics modeled after the ones in the analytical updates (see Appendix \ref{appendix:architecture} for architecture details).
+We employ a variational distribution that updates the global variables $q_\f(\mu, \tau \mid x, c)$ and the local variables $q_\f(c \mid x, \mu, \tau)$, using point-wise neural sufficient statistics modeled after the ones in the analytical updates (see Appendix \ref{appendix:arch-gmm} for architecture and training details). 
 
-We train our models on 20,000 datasets with $I = 3$ clusters and $N = 60$ data points with fixed hyperparameters ($\mu_0 = 0$, $\nu_0 = 0.3$, $\alpha_0 = 2$, $\beta_0 = 2$). We use $20$ GMM datasets per batch, $K=10$ sweeps, $L=10$ particles, and Adam ($\mathrm{lr} = 10^{-4}, \beta_1 = 0.9, \beta_2 = 0.99$) for 200,000 iterations.
-
-We compare the APG sampler to samples from a standard encoder with MLP and LSTM architectures,  which is trained using reweighted wake-sleep (RWS). Both architectures are parameterized using the same neural sufficient statistics as the APG sampler.
-
-Figure \ref{samples-gmm} shows sequences of single samples from the variational distribution, where the first sample is drawn using RWS. Even when using a parameterization that employs neural sufficient statistics, the RWS encoder fails to propose reasonable clusters, whereas the APG sampler typically converges within 12 iterations across a range of dataset sizes.
-
-Furthermore, we would like to quantify how similar learned proposals $q_\f(z_b \mid x, z_{-b})$ are to the conditional posteriors $p_\q(z_b \mid x, z_{-b})$. With the case of GMM where the exact conditional posterior is tractable, we verify the convergence of the learned proposals by computing the inclusive KL divergence $\mathcal{K}_b(\f)$ defined in equation ~\ref{eq:variational_objective} (see Table \ref{table-gmm}). We can see that the APG samplers of the both $\{\tau, \mu\}$ and $\{c\}$ converge to the true conditional posterior.
-
+We compare the APG sampler to samples from a standard encoder with MLP and LSTM architectures,  which is trained using reweighted wake-sleep (RWS). Figure \ref{samples-gmm} shows sequences of single samples from the variational distribution, where the first sample is drawn using RWS. The RWS encoder fails to propose reasonable clusters, whereas the APG sampler typically converges within 12 iterations across a range of dataset sizes. With the case of GMM where the exact conditional posterior  $p_\q(z_b \mid x, z_{-b})$ is tractable, we further verify the convergence of the learned proposals by computing the KL $\mathcal{K}_b(\f)$ defined in equation ~\ref{eq:variational_objective} (see Table \ref{table-gmm}).
 
 % \begin{figure}[t!]
 %   \centering
@@ -670,14 +668,20 @@ Furthermore, we would like to quantify how similar learned proposals $q_\f(z_b \
 We next consider the task of training a deep generative model $p_\q(\x, \z)$ is jointly with the APG sampler. Our dataset consists of ring-shaped clusters. The true generative model (which we assume is unknown) takes the form
 \begin{align*}
     \mu_i \sim \text{Norm}(0, 
-    \sigma_0^2 I), 
-    \qquad i = 1, 2, ..., I \\
-    c_n \sim \mathrm{Disc}(\pi), \quad \alpha_n \sim \mathrm{Unif}[0, 2\pi], \\
+    \sigma_0^2 I)
+    % \qquad i = 1, 2, ..., I 
+    ,
+    c_n \sim \mathrm{Disc}(\pi)
+    , 
+    % \quad 
+    \alpha_n \sim \mathrm{Unif}[0, 2\pi]
+    ,
+    % \quad
     x_n | c_n=i \sim \text{Norm}(g_\q(\alpha_n) + \mu_i, \Sigma_\epsilon).
 \end{align*}
 Here $\mu_i$ is center of the $i$th ring. Given a cluster assignment $c_n$ and an angle $\alpha_n$ we define a position on a ring, from which We sample a data point $x_n$ with 2D Gaussian noise.
 
-\begin{figure*}[!h]
+\begin{figure*}[!t]
   \centering
 %   \begin{subfigure}[t]{1.0\textwidth}
 %   \includegraphics[width=1.0\textwidth]{figures/bmnist-3digits-samples.pdf}
@@ -691,35 +695,15 @@ Here $\mu_i$ is center of the $i$th ring. Given a cluster assignment $c_n$ and a
 % %   \caption{4 digits.}
 %   \end{subfigure}
 %   %%%%%%%%%%%
-  \begin{subfigure}[t]{1.0\textwidth}
   \includegraphics[width=1.0\textwidth]{figures/bmnist-5digits-samples.pdf}
-%   \vspace*{-5mm}
-%   \caption{5 digits.}
-  \end{subfigure}
-  \caption{Inferred digit trajectories and reconstructions for $D = 5$ digits for $T = 15$ for a model trained on $D = 3$ and $T = 10$.}
+  \vspace{-2.0em}
+  \caption{Inferred digit trajectories and reconstructions for $D = 5$ digits for $T = 15$.}
   \label{mnist-qualitative}
 \end{figure*}
-
-We train our model on 20,000 datasets with $N = 200$ data points and $I = 4$ clusters with fixed hyperparameters ($\sigma_0 = 3.5$, $\Sigma_{\epsilon} = 0.2$). We use $20$ datasets per batch, $K=10$ sweeps, $L=10$ particles, and Adam ($\mathrm{lr} = 10^{-4}, \beta_1 = 0.9, \beta_2 = 0.99$) for 200,000 iterations (see Appendix \ref{appendix:architecture} for architecture details).
-
-Once again, we compare the APG sampler with the encoders using RWS. Figure~\ref{samples-dgmm} shows individual samples analogous to the ones in Figure~\ref{samples-gmm}. The APG sampler scales to a large range of number of variables, whereas a standard encoder trained using RWS fails to produce reasonable proposals.
+Once again, we compare the APG sampler with the encoders using RWS (see Appendix \ref{appendix:arch-dgmm} for architecture and training details). Figure~\ref{samples-dgmm} shows individual samples analogous to the ones in Figure~\ref{samples-gmm}. The APG sampler scales to a large range of number of variables, whereas a standard encoder trained using RWS fails to produce reasonable proposals.
 
 \subsection{Sample Quality Evaluation}
-In both mixture models, we compute the log-joint distribution $\log p_\q(\x, z)$ (see Table \ref{table-both-mm}) as a function of sweep iteration to measure the convergence and the effective sample size (see Table \ref{table-both-mm}) to assess proposal quality
-\begin{align}
-\label{ess-eq}
-    \frac{\text{ESS}}{L} 
-    = 
-    \frac{(\sum_{l=1}^L w^{k,l})^2}
-         {L \sum_{l=1}^L (w^{k,l})^2}
-    .
-\end{align}
-
-
-\textbf{Log joint} $\log p_\q(\x, z)$. Because the marginal $q_\f(z^k | x)$ is intractable, it is difficult to compute an lower bound or upper bound at each sweep. Here we compute the log joint in each test dataset for both the APG sampler with different number of sweeps and the RWS baselines and report the differences on average to see how much more is achieved by the APG sampler. In both models, the APG sampler gains a higher log joint compared with the encoder trained by RWS.
-
-\textbf{ESS}. One advantage of the APG sampler that it decomposes a high dimensional sampling problem into a sequence of lower dimensional sampling problems. To show that, we compute the ESS when 1) we resample only after one sweep and 2) we resample after each block update. WE can see that the granular sampling strategy significantly improves the ESS in both cases.
-
+Because the marginal $q_\f(z^k | x)$ is intractable, it is difficult to compute an lower/upper bound bound at each sweep. Instead, we measure the different between the log-joint distribution $\log p_\q(\x, z)$ in APG and that in baselines. In both models, the APG sampler gains a higher log joint compared with the encoder trained by RWS. To assess the proposal quality, we compute effective sample size (see Appendix~\ref{appendix:ess}) w.r.t. each block update (see Table~\ref{table-both-mm} for both metrics). We can see that the granular sampling strategy significantly improves the ESS in both cases.
 \subsection{Fixed Computation Budget Analysis}
 As a mean of comparing the performance of APG samplers for varying numbers of sweeps $K$, we perform an experiment in which the computation budget is fixed at $K \cdot L = 1000$ samples. Figure~\ref{fig:budget} shows $\log p_\theta(x, z)$ and ESS/L. The shaded area denotes the standard deviation over 10 runs that each comprise 5 datasets that were chosen at random. We can see that it in general, it is more effective to perform more APG sweeps $K$ with a smaller number of particles $L$, that it is to increase the particle budget. 
 
@@ -731,13 +715,14 @@ The deep generative model is a state space model that factorizes across digits o
 \begin{align*}
     z^{\mathrm{what}}_{d} 
     &\sim 
-    \text{Norm}(0, I), 
-    \,\,\, 
-    z^{\mathrm{where}}_{d, 1} \sim \text{Norm}(0, I), 
-    \\
+    \text{Norm}(0, I)
+    ,
+    \quad
+    z^{\mathrm{where}}_{d, 1} \sim \text{Norm}(0, I)
+    , 
+    \quad
     z^{\mathrm{where}}_{d, t} 
-    %| z^{\mathrm{where}}_{d, t - 1} 
-    &\sim 
+    \sim 
     \text{Norm}(z^{\mathrm{where}}_{d, t - 1}, \sigma^2_0 I) 
     \\
     x_t 
@@ -755,35 +740,19 @@ The deep generative model is a state space model that factorizes across digits o
         \Big)
     \Big)
 \end{align*}
-Here, ST is a spatial transformer \cite{jaderberg2015spatial} that maps the output of a feedforward decoder $\mu_\q$ that maps logits for a 28$\times$28 MNIST image onto a 96$\times$96 canvas based on the location variable $z^{\mathrm{where}}_{d, t}$. 
+Here, ST is a spatial transformer \cite{jaderberg2015spatial} that maps the output of a feedforward decoder $\mu_\q$ that maps logits for a 28$\times$28 MNIST image onto a 96$\times$96 canvas based on the location variable $z^{\mathrm{where}}_{d, t}$. The APG sampler employs $T+1$ blocks which consists of those variables (see Appendix~\ref{appendix:arch-bmnist} for architecture and training details).
 
-Our amortized Gibbs updates employ $T + 1$ blocks $(z_{1:D}^{\mathrm{what}}, z_{1:D, 1}^{\mathrm{where}}, z_{1:D, 2}^{\mathrm{where}}, \dotsc, z_{1:D, T}^{\mathrm{where}})$.
-Empirically this works better than splitting the latent variables into global and local variables, since resampling at each time step $t$ helps disentangle the digit locations if they overlap.
-
-We train our model on 60000 bouncing MNIST sequences, each of which contains $D=3$ digits and $T=10$ frame images. We use $10$ sequences per batch, $K=5$ sweeps, $L=10$ particles, and Adam ($\mathrm{lr} = 10^{-4}, \beta_1 = 0.9, \beta_2 = 0.99$) for 200,000 iterations (see Appendix \ref{appendix:architecture} for architecture details).
-
-We show that APG sampler can scale to larger number of variables by testing the model on datasets with $T\in \{20, 100\}$ time steps  and $D \in \{3, 4, 5\}$ digits. Figure~\ref{mnist-qualitative} shows the inference and reconstruction using single samples from the variational distribution. (plots are truncated by the first $15$ time steps due to limited space, see Appendix \ref{appendix:full-recons} for more examples with full time steps). 
-Qualitatively, we see that the digit trajectories $\z_{1:D, 1:T}^{\mathrm{where}}$ and latent variables $\z_{1:D}^{\mathrm{what}}$ are inferred well.
-In Figure~\ref{plot-mse-bmnist}, we show the mean squared error between the video and its reconstruction for different $T$ and $D$.
-The results confirm that performance improves with increasing number of Gibbs sweeps $K$.
-In certain cases, a larger number of time points $T$ in fact improves convergence as a function of the number of sweeps $K$.
-
-\begin{figure}[!t]
-    \centering
-    \includegraphics[width=0.5\columnwidth]{figures/bmnist-mse.pdf}
-    \caption{Mean squared error between video frames and reconstructions as a function of the number of APG sweeps. }
-    \label{plot-mse-bmnist}
-\end{figure}
-
+At test time, we show that APG sampler can scale up to $T=100$ time steps and $D=5$ digits (see Figure~\ref{mnist-qualitative} and Appendix~\ref{appendix:samples-bmnist}). Qualitatively, we see that the digit trajectories $\z_{1:D, 1:T}^{\mathrm{where}}$ and latent variables $\z_{1:D}^{\mathrm{what}}$ are inferred well.
+Furthermore, we compute the mean squared error (see Appendix~\ref{appendix:bmnist-mse}) between the video and its reconstruction for different $T$ and $D$. The results confirm that performance improves with increasing number of Gibbs sweeps $K$.
 \section{Conclusion}
 
 % We developed amortized Gibbs samplers that iterate between updates to global and local variables using neural proposals. These methods offer a path towards designing variational approximations to intractable posteriors in structured deep generative models. APG samplers have particular strengths in problems with global variables, but more generally make it possible to design amortized approaches that exploit conditional independence. This decomposes high-dimensional sampling problems into a sequence of lower-dimensional problems, hereby greatly reducing estimator variance. Moreover, our parameterization in terms of neural sufficient statistics makes it comparatively easy to design models that will generalize to datasets that vary in size. 
 
-One of the challenges in amortized inference for deep generative models is learning high-quality proposals for models with a structured prior over a high-dimensional set of latent variables. These priors arise naturally when, rather than encoding a single data point (e.g.~an image), we wish to encode a dataset (e.g.~a sequence of images). 
-Even for apparently simple problems, such as inferring the cluster parameters and assignments in a mixture model, standard encoders often fail to produce good samples. One of the reasons for this is that it is fundamentally difficult to jointly generate proposals for a high-dimensional set of latent variables.
-
-APG samplers are very general, and offer a path towards the development of deep generative models that incorporate structured priors to provide meaningful inductive biases in settings where we have little or no supervision. These methods have particular strengths in problems with global variables, but more generally make it possible to design amortized approaches that exploit conditional independence. Moreover, our parameterization in terms of neural sufficient statistics makes it comparatively easy to design models that scale to much larger number of latent variables and thus generalize to datasets that vary in size. 
-
+One of the challenges in amortized inference is learning high-quality proposals for models with a structured prior over high-dimensional latent variables. These priors arise naturally when, rather than encoding a single data point (e.g.~an image), we wish to encode a dataset (e.g.~a sequence of images). 
+% Even for apparently simple problems, such as inferring the cluster parameters and assignments in a mixture model, standard encoders often fail to produce good samples. One of the reasons for this is that it is fundamentally difficult to jointly generate proposals for a high-dimensional set of latent variables.
+\emph{APG samplers} are very general, and offer a path towards the development of deep generative models that incorporate structured priors to provide meaningful inductive biases in settings where we have no supervision. 
+% These methods have particular strengths in problems with global variables, but more generally make it possible to design amortized approaches that exploit conditional independence. 
+Moreover, our parameterization in terms of neural sufficient statistics makes it comparatively easy to design models that scale to much larger number of latent variables and thus generalize to datasets that vary in size. 
 Immediate lines of future work are to compare the approach in this paper, which learns kernels that leave the target density invariant, with approaches that perform annealing, in which the learned kernels are assymmetric in the sense that they gradually transform the initial encoder distribution to the target density. 
 
 \section{Acknowledgements}
@@ -839,6 +808,18 @@ This work was supported by the Intel Corporation, NSF award 1835309, the DARPA L
 \end{algorithmic}
 \end{algorithm}
 
+\subsection{Effective Sample Size}
+\label{appendix:ess}
+To assess the proposal quality at test time, we compute the following (normalized) effective sample size
+\begin{align}
+\label{ess-eq}
+    \frac{\text{ESS}}{L} 
+    = 
+    \frac{(\sum_{l=1}^L w^{k,l})^2}
+         {L \sum_{l=1}^L (w^{k,l})^2}
+    .
+\end{align}
+where $L$ denotes the number of particles, and the superscript $k, l$ denotes the $l$th particle at $k$th sweep.
 \subsection{Gradient of the generative model}% $p_\q(x \mid z)$}
 \label{appendix:grad-theta}
 This is actually a known (although indeed not obvious) identity. Briefly, we can express the expected gradient of the log joint as
@@ -1231,9 +1212,20 @@ since $z_{-b} = z_{-b}'$ and $z_b = z_b'$ due to the re-assignment (line~\ref{li
   \caption{Samples from the GMM and the DGMM. (\textbf{a}) GMM, the left column shows 5 test datasets with different number of data points. The subsequent columns show inference results by RWS, followed by results after 4, 8 and 12 APG updates. (\textbf{b}) DGMM, the left column shows 5 test datasets with different number of data points. The subsequent columns show the inference results by RWS, followed by results after 3 and 6 APG updates. The right column shows reconstructions from the learned generative model.}
   \label{samples-mixture}
 \end{figure*}
+
+\subsection{Mean Squared Error in Bouncing MNIST}
+\label{appendix:bmnist-mse}
+We compute the mean squared error between the the video and its reconstruction for different time steps $T$ and number of digits $D$:
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.5\columnwidth]{figures/bmnist-mse.pdf}
+    \caption{Mean squared error between video frames and reconstructions as a function of the number of APG sweeps. }
+    \label{plot-mse-bmnist}
+\end{figure}
+
 \newpage
 \subsection{Qualitative Results in Bouncing MNIST}
-\label{appendix:samples-mnnist}
+\label{appendix:samples-bmnist}
 \begin{figure*}[!h]
   \centering
   \begin{subfigure}[t]{1.0\textwidth}
@@ -1279,10 +1271,13 @@ The following are full reconstructions on test sets where time steps $T=100$ and
 % \end{figure*}
 
 \newpage
-\subsection{Architecture of the Amortized Population Gibbs samplers}
-\label{appendix:architecture}
-\subsubsection{GMM}
-\
+\subsection{Architecture of the APG samplers and Training Details}
+\subsubsection*{GMM}
+\label{appendix:arch-gmm}
+
+In GMM experiment, We train our models on 20,000 datasets with $I = 3$ clusters and $N = 60$ data points with fixed hyperparameters ($\mu_0 = 0$, $\nu_0 = 0.3$, $\alpha_0 = 2$, $\beta_0 = 2$). We use $20$ GMM datasets per batch, $K=10$ sweeps, $L=10$ particles, and Adam ($\mathrm{lr} = 10^{-4}, \beta_1 = 0.9, \beta_2 = 0.99$) for 200,000 iterations.
+
+The architecture of the neural networks are as follows:
 \begin{table}[h]
     \centering
     \begin{tabular}{c|c|c}
@@ -1356,7 +1351,12 @@ The following are full reconstructions on test sets where time steps $T=100$ and
 \end{table}
 
 % \newpage
-\subsubsection{DGMM}
+\subsubsection*{DGMM}
+\label{appendix:arch-dgmm}
+
+We train our model on 20,000 datasets with $N = 200$ data points and $I = 4$ clusters with fixed hyperparameters ($\sigma_0 = 3.5$, $\Sigma_{\epsilon} = 0.2$). We use $20$ datasets per batch, $K=10$ sweeps, $L=10$ particles, and Adam ($\mathrm{lr} = 10^{-4}, \beta_1 = 0.9, \beta_2 = 0.99$) for 200,000 iterations.
+
+The architecture of the neural networks are as follows:
 \begin{table}[h]
     \centering
     \begin{tabular}{c|c|c}
@@ -1497,8 +1497,18 @@ The following are full reconstructions on test sets where time steps $T=100$ and
     \label{arch-dgmm-decoder}
 \end{table}
 \newpage
-\subsubsection{Bouncing MNIST}
+\subsubsection*{Bouncing MNIST}
+\label{appendix:arch-bmnist}
 
+In bouncing MNIST, our amortized Gibbs updates employ $T + 1$ blocks
+\begin{align*}
+    (z_{1:D}^{\mathrm{what}}, z_{1:D, 1}^{\mathrm{where}}, z_{1:D, 2}^{\mathrm{where}}, \dotsc, z_{1:D, T}^{\mathrm{where}}).
+\end{align*} 
+Empirically this works better than splitting the latent variables into global and local variables, since resampling at each time step $t$ helps disentangle the digit locations if they overlap.
+
+We train our model on 60000 bouncing MNIST sequences, each of which contains $D=3$ digits and $T=10$ frame images. We use $10$ sequences per batch, $K=5$ sweeps, $L=10$ particles, and Adam ($\mathrm{lr} = 10^{-4}, \beta_1 = 0.9, \beta_2 = 0.99$) for 200,000 iterations.
+
+The architecture of the neural networks are as follows:
 \begin{table}[h]
 \centering
 \label{arch-bmnist-decoder}
