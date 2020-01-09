@@ -381,11 +381,11 @@ When the approximate Gibbs kernel converges to the actual Gibbs kernel, this cho
     \,
     q_\f(z^{k} \,|\, x, z^{k-1}).
 \end{align*}
-\textbf{Resampling}. In general, the weights $w^k$ in the sequential importance sampling scheme defined above will have a high variance. The weights $w^1$ are just normal importance sampling weights, which themselves will have a high variance when $z$ is high-dimensional, or there are correlations between variables. Moreover, we are now sampling these same variables $k$ times. When the approximate Gibbs kernel converges to the true kernel, this will not increase the variance of weights (since $v^k=1$ in this limit), but during training variance of weights $w^k$ will increase with $k$, since we are now jointly sampling an entire Markov chain.
+\textbf{Resampling}. In general, the weights $w^k$ in the sequential importance sampling scheme defined above will have a high variance. Moreover, we are now sampling these same variables $k$ times. When the approximate Gibbs kernel converges to the true kernel, this will not increase the variance of weights (since $v^k=1$ in this limit), but during training variance of weights $w^k$ will increase with $k$, since we are now jointly sampling an entire Markov chain.
 
-To overcome this problem, SMC samplers interleave application of the transition kernel with a \emph{resampling} step. This step generates a new set of samples by selecting current samples with replacement, with probability proportional to their weight. Concretely, suppose that we have a set \emph{incoming} samples $\{(w^{k,l}, z^{k,l})\}_{l=1}^L$, then the resampling procedure (see Algorithm~\ref{alg:resample}) selects index $a$ with probability $P(a\!=\!l) = w^{k,l} / \sum_{l'} w^{k,l'}$ and returns an outgoing sample $z'^{k,l} = z^{k,a}$ whose $w'^{k,l} = \frac{1}{L} \sum_l w^{k,l}$ is equal to the average weight. The reduces the variance of the importance weights at the expense of also reducing the diversity of the sample set; high-weight samples are selected frequently, whereas low-weight samples are selected infrequently or not at all.
-
-When we perform resampling after each sweep, we reduce the variance of importance weights to an extent. However we will likely still have high-variance weights, since each sample from the approximate Gibbs kernel still constitutes a high-dimensional proposal over all variables in the model. To further reduce the variance, we will employ resampling after each block update, rather than after each sweep. Because the incoming weights are now equal at each block update, we can compute gradient estimates using incremental weights $v$ of the form
+To overcome this problem, SMC samplers interleave application of the transition kernel with a \emph{resampling} step (see Algorithm~\ref{alg:resample}). This step generates a new set of samples by selecting current samples with replacement, with probability proportional to their weight. 
+% Concretely, suppose that we have a set \emph{incoming} samples $\{(w^{k,l}, z^{k,l})\}_{l=1}^L$, then the resampling procedure (see Algorithm~\ref{alg:resample}) selects index $a$ with probability $P(a\!=\!l) = w^{k,l} / \sum_{l'} w^{k,l'}$ and returns an outgoing sample $z'^{k,l} = z^{k,a}$ whose $w'^{k,l} = \frac{1}{L} \sum_l w^{k,l}$ is equal to the average weight. The reduces the variance of the importance weights at the expense of also reducing the diversity of the sample set; high-weight samples are selected frequently, whereas low-weight samples are selected infrequently or not at all.
+We will employ resampling after each block update, rather than after each sweep. Because the incoming weights are now equal at each block update, we can compute gradient estimates using incremental weights $v$ of the form
 \begin{align}
     v
     = 
@@ -393,10 +393,10 @@ When we perform resampling after each sweep, we reduce the variance of importanc
          {p_\q(x, z_b, z_{-b}) \: q_\f(z'_b \mid  x, z_{-b})}
     .
 \end{align}
-These incremental weights will have a much lower variance than the incremental weights for a full sweep, since we are now able to decompose a sampling problem for all the variables in a model into sampling problems for individual blocks. In models with many latent variables, such as the ones that we will consider in our experiments, this has the potential to greatly increase the tractability of the gradient estimation problem. 
-
-
-We refer to this implementation of a SMC sampler as an amortized population Gibbs (APG) sampler, and summarize all the steps of the computation in Algorithm~\ref{alg:amortized-gibbs}. In Appendix~\ref{appendix:proof-algo}, we prove that this algorithm is correct using an argument based on proper weighting. More informally this property holds due to the fact that this sampler is a specific instance of a SMC sampler. 
+These incremental weights will have a much lower variance than the incremental weights for a full sweep, since we are now able to decompose a sampling problem for all the variables in a model into sampling problems for individual blocks. 
+% In models with many latent variables, such as the ones that we will consider in our experiments, this has the potential to greatly increase the tractability of the gradient estimation problem. 
+We refer to this implementation of a SMC sampler as an amortized population Gibbs (APG) sampler, and summarize all the steps of the computation in Algorithm~\ref{alg:amortized-gibbs}. In Appendix~\ref{appendix:proof-algo}, we prove that this algorithm is correct using an argument based on proper weighting. 
+% More informally this property holds due to the fact that this sampler is a specific instance of a SMC sampler. 
 
 \begin{algorithm}[!tb]
 \setstretch{1.2}
@@ -430,38 +430,38 @@ We refer to this implementation of a SMC sampler as an amortized population Gibb
 \end{algorithmic}
 \end{algorithm}
 \section{Neural Sufficient Statistics}
-Gibbs sampling strategies that sample from exact conditionals rely on conjugacy relationships. Typically, we assume a prior and likelihood that can both be expressed as exponential families
+Gibbs sampling strategies that sample from exact conditionals rely on conjugacy relationships.Assume a prior $p(\z ) $ and likelihood $p(\x \mid \z) $ that can both be expressed as exponential families
 \begin{align*}
-    p(\x \mid \z) 
-    &= 
-    h(\x) \exp \{ 
-        \eta(\z)^\top \: T(\x)  
-        -\log A(\eta(\z)) \}, 
-    \\
     p(\z ) 
-    &= 
+    = 
     h(\z) \exp \{ 
         \lambda^\top T(\z) 
-        - \log A(\lambda) \}.
+        - \log A(\lambda) \},
+    \qquad
+    p(\x \mid \z) 
+    = 
+    h(\x) \exp \{ 
+        \eta(\z)^\top \: T(\x)  
+        -\log A(\eta(\z)) \}.
 \end{align*}
-In these densities $h(\cdot)$ is a base measure, $T(\cdot)$ is a vector of sufficient statistics, and $A(\cdot)$ is a log normalizer. The two densities are jointly conjugate when
-\begin{align*}
-    T(\z) = (\eta(\z) -\log A(\eta(\z)))
-\end{align*}
-In this case, the posterior distribution lies in the same exponential family as the prior
-\begin{align*}
-    p(\z \mid \x) 
-    \propto 
-    h(z)
-    \exp 
-    \big\{
-         (\lambda_1 + T(\x))^\top T(\z) 
-        -
-        (\lambda_2 + 1) 
-        \log A(\eta(\z))
-    \big\}
-    .
-\end{align*}
+In these densities $h(\cdot)$ is a base measure, $T(\cdot)$ is a vector of sufficient statistics, and $A(\cdot)$ is a log normalizer. The two densities are jointly conjugate when $T(\z) = (\eta(\z) -\log A(\eta(\z)))$.
+% \begin{align*}
+%     T(\z) = (\eta(\z) -\log A(\eta(\z)))
+% \end{align*}
+ In this case, the posterior distribution lies in the same exponential family as the prior.
+% \begin{align*}
+%     p(\z \mid \x) 
+%     \propto 
+%     h(z)
+%     \exp 
+%     \big\{
+%          (\lambda_1 + T(\x))^\top T(\z) 
+%         -
+%         (\lambda_2 + 1) 
+%         \log A(\eta(\z))
+%     \big\}
+%     .
+% \end{align*}
 Typically, the prior $p(\z \mid \lambda)$ and likelihood $p(x \mid z)$ are not jointly conjugate, but it is possible to identify conjugacy relationships at the level of individual blocks of variables, 
 \begin{align*}
     p(\z_b \mid \z_{-b}, \x)
@@ -482,7 +482,8 @@ In the more general setting we consider here, these conjugacy relationships will
     p(\z_b \mid \lambda + T_\f(x, z_{-b}))
     .
 \end{align}
-This parameterization has a number of desirable properties. Exponential families are the largest-entropy distributions that match the moments defined by the sufficient statistics (see e.g.~\cite{wainwright2008graphical}), which is helpful when minimizing the inclusive KL divergence. In exponential families it is also more straightforward to control the entropy of the variational distribution. In particular, we can initialize $T_\f(x, z_{-b})$ to output values close to zero in order to ensure that we initially propose from a prior and/or regularize $T_\f(x, z_{-b})$ to help avoid local optima.
+This parameterization has a number of desirable properties. Exponential families are the largest-entropy distributions that match the moments defined by the sufficient statistics (see e.g.~\cite{wainwright2008graphical}), which is helpful when minimizing the inclusive KL divergence. In exponential families it is also more straightforward to control the entropy of the variational distribution. 
+% In particular, we can initialize $T_\f(x, z_{-b})$ to output values close to zero in order to ensure that we initially propose from a prior and/or regularize $T_\f(x, z_{-b})$ to help avoid local optima.
 
 A particularly useful case arises in models where the data $\x = \{x_1, \ldots, x_N\}$ are independent conditioned on $\z$. In these models it is often possible to partition the latent variables $\z = \{\z^\textsc{g}, \z^\textsc{l}\}$ into global and local variables $\z^{\textsc{g}}$ and local variables $\z^{\textsc{l}}$. The dimensionality of global variables is typically constant, whereas local variables $\z^\textsc{l} = \{\z^\textsc{l}_1, \ldots, \z^\textsc{l}_N\}$ have a dimensionality that increases with the data $N$. For models with this structure, the local variables are typically conditionally independent $z^\textsc{L}_n \bot z^\textsc{L}_{-n} \mid x, z^\textsc{g}$, which means that we can parameterize the sufficient statistics as
 \begin{align*}
