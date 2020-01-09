@@ -1,0 +1,74 @@
+% operators
+
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+
+% vectors
+\let\avec\vec
+%\renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}}
+\renewcommand{\v}[1]{\ensuremath{\boldsymbol{#1}}}
+
+\newcommand{\src}{\lstinline[mathescape, keepspaces]}
+\newcommand{\msrc}[1]{\mbox{\src!#1!}}
+
+\newcommand{\tens}[1]{%
+  \mathbin{\mathop{\otimes}\limits_{#1}}%
+}
+
+% symbol shorthands (lowercase)
+%\newcommand{\x}{\ensuremath{\v{x}}}
+%\newcommand{\y}{\ensuremath{\v{y}}}
+%\newcommand{\z}{\ensuremath{\v{z}}}
+%\newcommand{\h}{\v{\eta}}
+%\newcommand{\e}{\v{\epsilon}}
+%\renewcommand{\u}{\v{u}}
+\newcommand{\pd}{\ensuremath{\partial}}
+\newcommand{\x}{\ensuremath{x}}
+\newcommand{\y}{\ensuremath{y}}
+\newcommand{\z}{\ensuremath{z}}
+\newcommand{\h}{\ensuremath{\eta}}
+\newcommand{\e}{\ensuremath{\epsilon}}
+\renewcommand{\u}{\ensuremath{u}}
+\newcommand{\q}{\theta}
+\newcommand{\f}{\phi}
+\renewcommand{\l}{\lambda}
+\renewcommand{\t}{\tau}
+
+% symbol shorthands (uppercase)
+\renewcommand{\L}{\ensuremath{\mathcal{L}}}
+\newcommand{\KL}[2]{\ensuremath{\mathrm{KL}\left({#1} \:\middle\vert\middle\vert\: {#2}\right)}}
+\newcommand{\E}{\ensuremath{\mathbb{E}}}
+\newcommand{\N}{\ensuremath{\mathcal{N}}}
+% \newcommand{\C}{\ensuremath{\mathtt{Concrete}}}
+
+%\let\lmid\mid
+%\renewcommand{\mid}{\!\lmid\!}
+
+\newcommand{\eval}{\ensuremath{$\reflectbox{$\,\leadsto\,$}$}}
+%\newcommand{\eval}{\sim}
+\newcommand{\hide}[1]{}
+
+\makeatletter
+\DeclareRobustCommand{\cev}[1]{%
+  \mathpalette\do@cev{#1}%
+}
+\newcommand{\do@cev}[2]{%
+  \fix@cev{#1}{+}%
+  \reflectbox{$\m@th#1\vec{\reflectbox{$\fix@cev{#1}{-}\m@th#1#2\fix@cev{#1}{+}$}}$}%
+  \fix@cev{#1}{-}%
+}
+\newcommand{\fix@cev}[2]{%
+  \ifx#1\displaystyle
+    \mkern#23mu
+  \else
+    \ifx#1\textstyle
+      \mkern#23mu
+    \else
+      \ifx#1\scriptstyle
+        \mkern#22mu
+      \else
+        \mkern#22mu
+      \fi
+    \fi
+  \fi
+}
