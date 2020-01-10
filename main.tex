@@ -402,6 +402,12 @@ In general, the weights $w^k$ in the SIS will have a high variance. Moreover, we
 To overcome this problem, SMC samplers interleave application of the transition kernel with a \emph{resampling} step (see Algorithm~\ref{alg:resample}), which generates a new set of samples by selecting current samples with replacement, with probability proportional to their weight. 
 % Concretely, suppose that we have a set \emph{incoming} samples $\{(w^{k,l}, z^{k,l})\}_{l=1}^L$, then the resampling procedure (see Algorithm~\ref{alg:resample}) selects index $a$ with probability $P(a\!=\!l) = w^{k,l} / \sum_{l'} w^{k,l'}$ and returns an outgoing sample $z'^{k,l} = z^{k,a}$ whose $w'^{k,l} = \frac{1}{L} \sum_l w^{k,l}$ is equal to the average weight. The reduces the variance of the importance weights at the expense of also reducing the diversity of the sample set; high-weight samples are selected frequently, whereas low-weight samples are selected infrequently or not at all.
 We will employ resampling after each block update $q_\f(z_b \mid  x, z_{-b})$, which enables us to compute the gradient estimates using incremental weights $v$ of the form
+% $
+%     v
+%     = 
+%     p_\q(x, z'_b, z_{-b}) q_\f(z_b \mid  x, z_{-b}) \: / \:
+%     p_\q(x, z_b, z_{-b}) q_\f(z'_b \mid  x, z_{-b})
+% $
 \begin{align}
     v
     = 
@@ -573,7 +579,7 @@ To evaluate whether APG samplers can learn the exact Gibbs updates in conditiona
 
 We employ a variational distribution that updates the global variables $q_\f(\mu, \tau \mid x, c)$ and the local variables $q_\f(c \mid x, \mu, \tau)$, using point-wise neural sufficient statistics modeled after the ones in the analytical updates (see Appendix \ref{appendix:arch-gmm} for architecture and training details). 
 
-We compare the APG sampler to samples from a standard encoder with MLP and LSTM architectures,  which is trained using reweighted wake-sleep (RWS). Figure \ref{samples-gmm} shows sequences of single samples from the variational distribution, where the first sample is drawn using RWS. The RWS encoder fails to propose reasonable clusters, whereas the APG sampler typically converges within 12 iterations across a range of dataset sizes. With the case of GMM where the exact conditional posterior  $p_\q(z_b \mid x, z_{-b})$ is tractable, we further verify the convergence of the learned proposals by computing the KL $\mathcal{K}_b(\f)$ defined in equation ~\ref{eq:variational_objective} (see Table \ref{table-gmm}).
+We compare the APG sampler to samples from a standard encoder with MLP and LSTM architectures,  which is trained using reweighted wake-sleep (RWS). Figure \ref{samples-gmm} shows sequences of single samples from the variational distribution, where the first sample is drawn using RWS. The RWS encoder fails to propose reasonable clusters, whereas the APG sampler typically converges within 12 iterations across a range of dataset sizes. With the case of GMM where the exact conditional posterior  $p_\q(z_b \mid x, z_{-b})$ is tractable, we further verify the convergence of the learned proposals by computing the KL $\mathcal{K}_b(\f)$ defined in equation ~\ref{eq:variational_objective} (see Table \ref{table-gmm} in Appendix~\ref{appendix:table-both-mm}).
 
 % \begin{figure}[t!]
 %   \centering
@@ -628,58 +634,9 @@ Here $\mu_i$ is center of the $i$th ring. Given a cluster assignment $c_n$ and a
   \label{fig:budget}
 \end{figure*}
 
-\setlength{\tabcolsep}{2pt}
-\begin{table*}[t!]
-    \centering
-    \caption{In both mixture models we compute (i) the difference between the log joint in APG and that in baseline and (ii) the ESS/L w.r.t. each block update. In GMM we additionally compute the KL in closed form.}
-    \vspace*{-3.5mm}
-    \begin{subtable}{.4\linewidth}
-    \centering
-    \caption{GMM}
-    \vspace{-0.7em}
-    \begin{tabular}{ccc|cccc}
-     
-    \toprule
-        & $\Delta \log p_\q(x, z)$ & 
-        \multicolumn{3}{c}{ESS/L} &
-        \multicolumn{2}{c}{$\mathrm{KL}(p_\q || q_\f)$}\\
-      & & \{$\tau, \mu, c$\} & \{$\tau, \mu$\} & \{$c$\} &\{$\tau, \mu$\}  & \{$c$\} \\
-    \midrule
-     MLP-RWS & -- & 0.001 & --& -- & -- & --\\
-     LSTM-RWS & 202.2 & 0.104 & -- & -- & --
-     & -- \\
-     APG (K=5) & 198.5 & 0.261 & 0.980 &  0.631 & 0.005 & 0.005
-\\
-     APG (K=10) & 211.9 & 0.398 & 0.981  & 0.760
-     & 0.004 & 0.004
-     \\
-    %  APG (K=15) & 215.2 & 0.416 & 0.983 & 0.780 & 0.003 & 0.004\\
-    \bottomrule
-    \end{tabular}   
-    \label{table-gmm}
-    \end{subtable}%
-    \begin{subtable}{.85\linewidth}
-    \centering
-    \caption{DGMM}
-    \vspace{-0.7em}
-    \begin{tabular}{cc|cc}
-    \toprule
-     $\Delta \log p_\q(x, z)$ & 
-         \multicolumn{3}{c}{ESS/L} \\
-         & \{$\mu, c, \alpha $\}& \{$\mu$\} & \{$c, \alpha$\}\\
-    \midrule
-    2538 & 0.001 & -- & -- \\
-    -- & 0.001 & -- & --\\
-    6201 & 0.002 & 0.013 & 0.422 \\
-    6293 & 0.002 & 0.019 & 0.454 \\
-    % 6310 & 0.003 & 0.025 & 0.488 \\
-    \bottomrule
-    \end{tabular}
-    \label{table-dgmm}
-    \end{subtable}
-    \label{table-both-mm}
-\end{table*}
-Once again, we compare the APG sampler with the encoders using RWS (see Appendix \ref{appendix:arch-dgmm} for architecture and training details). Figure~\ref{samples-dgmm} shows individual samples analogous to the ones in Figure~\ref{samples-gmm}. The APG sampler scales to a large range of number of variables, whereas a standard encoder trained using RWS fails to produce reasonable proposals.
+
+Once again, we compare the APG sampler with the encoders using RWS (see Figure~\ref{samples-dgmm}, Appendix~\ref{appendix:samples-mixture} and Appendix~\ref{appendix:table-both-mm} for results, see Appendix \ref{appendix:arch-dgmm} for architecture and training details) as GMM. The APG sampler scales to a large range of number of variables, whereas a standard encoder trained using RWS fails to produce reasonable proposals.
+
 \subsection{Quantitative Evaluation in Mixture Models}
 Because the marginal $q_\f(z^k | x)$ is intractable, it is difficult to compute an lower/upper bound at each sweep. To assess sample quality, we compute both the log joint $\log p_\q(\x, z)$ and the effective sample size (ESS, see Appendix~\ref{appendix:ess}) w.r.t. each block update (see Table~\ref{table-both-mm} for both metrics). We can see that the APG sampler acquires higher log joint and significantly improves ESS in both cases.
 
@@ -695,18 +652,6 @@ As a mean of comparing the performance of APG samplers for varying numbers of sw
 \subsection{Time Series Model -- Bouncing MNIST}
 \begin{figure*}[!t]
   \centering
-%   \begin{subfigure}[t]{1.0\textwidth}
-%   \includegraphics[width=1.0\textwidth]{figures/bmnist-3digits-samples.pdf}
-% %   \vspace*{-5mm}
-% %   \caption{3 digits.}
-%   \end{subfigure}
-%   %%%%%%%%%%%
-%   \begin{subfigure}[t]{1.0\textwidth}
-%   \includegraphics[width=1.0\textwidth]{figures/bmnist-4digits-samples.pdf}
-% %   \vspace*{-5mm}
-% %   \caption{4 digits.}
-%   \end{subfigure}
-%   %%%%%%%%%%%
   \includegraphics[width=1.0\textwidth]{figures/bmnist-5digits-samples.pdf}
   \vspace{-2.0em}
   \caption{Inferred digit trajectories and reconstructions for $D = 5$ digits for $T = 15$.}
@@ -1221,12 +1166,66 @@ since $z_{-b} = z_{-b}'$ and $z_b = z_b'$ due to the re-assignment (line~\ref{li
   \label{samples-mixture}
 \end{figure*}
 
+\subsection{Quantitative Results in Mixture Models}
+\label{appendix:table-both-mm}
+\setlength{\tabcolsep}{2pt}
+\begin{table*}[!h]
+    \centering
+    \caption{In both mixture models we compute (i) the difference between the log joint in APG and that in baseline and (ii) the ESS/L w.r.t. each block update. In GMM we additionally compute the KL in closed form.}
+    \vspace*{-0.5mm}
+    \begin{subtable}{.4\linewidth}
+    \centering
+    \caption{GMM}
+    \vspace{-0.5em}
+    \begin{tabular}{ccc|cccc}
+     
+    \toprule
+        & $\Delta \log p_\q(x, z)$ & 
+        \multicolumn{3}{c}{ESS/L} &
+        \multicolumn{2}{c}{$\mathrm{KL}(p_\q || q_\f)$}\\
+      & & \{$\tau, \mu, c$\} & \{$\tau, \mu$\} & \{$c$\} &\{$\tau, \mu$\}  & \{$c$\} \\
+    \midrule
+     MLP-RWS & -- & 0.001 & --& -- & -- & --\\
+     LSTM-RWS & 202.2 & 0.104 & -- & -- & --
+     & -- \\
+     APG (K=5) & 198.5 & 0.261 & 0.980 &  0.631 & 0.005 & 0.005
+\\
+     APG (K=10) & 211.9 & 0.398 & 0.981  & 0.760
+     & 0.004 & 0.004
+     \\
+     APG (K=15) & 215.2 & 0.416 & 0.983 & 0.780 & 0.003 & 0.004\\
+    \bottomrule
+    \end{tabular}   
+    \label{table-gmm}
+    \end{subtable}%
+    \begin{subtable}{.85\linewidth}
+    \centering
+    \caption{DGMM}
+    \vspace{-0.5em}
+    \begin{tabular}{cc|cc}
+    \toprule
+     $\Delta \log p_\q(x, z)$ & 
+         \multicolumn{3}{c}{ESS/L} \\
+         & \{$\mu, c, \alpha $\}& \{$\mu$\} & \{$c, \alpha$\}\\
+    \midrule
+    2538 & 0.001 & -- & -- \\
+    -- & 0.001 & -- & --\\
+    6201 & 0.002 & 0.013 & 0.422 \\
+    6293 & 0.002 & 0.019 & 0.454 \\
+    6310 & 0.003 & 0.025 & 0.488 \\
+    \bottomrule
+    \end{tabular}
+    \label{table-dgmm}
+    \end{subtable}
+    \label{table-both-mm}
+\end{table*}
+
 \subsection{Mean Squared Error in Bouncing MNIST}
 \label{appendix:bmnist-mse}
 We compute the mean squared error between the the video and its reconstruction for different time steps $T$ and number of digits $D$:
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=0.5\columnwidth]{figures/bmnist-mse.pdf}
+    \includegraphics[width=0.8\columnwidth]{figures/bmnist-mse.pdf}
     \caption{Mean squared error between video frames and reconstructions as a function of the number of APG sweeps. }
     \label{plot-mse-bmnist}
 \end{figure}
