@@ -576,10 +576,8 @@ To evaluate whether APG samplers can learn the exact Gibbs updates in conditiona
 %     ,
 % \end{align*}
 % where $\mathrm{I}[z_n \!=\! i]$ is an indicator function that evaluates to 1 if the equality holds, and 0 otherwise.
-
-We employ a variational distribution that updates the global variables $q_\f(\mu, \tau \mid x, c)$ and the local variables $q_\f(c \mid x, \mu, \tau)$, using point-wise neural sufficient statistics modeled after the ones in the analytical updates (see Appendix \ref{appendix:arch-gmm} for architecture and training details). 
-
-We compare the APG sampler to samples from a standard encoder with MLP and LSTM architectures,  which is trained using reweighted wake-sleep (RWS). Figure \ref{samples-gmm} shows sequences of single samples from the variational distribution, where the first sample is drawn using RWS. The RWS encoder fails to propose reasonable clusters, whereas the APG sampler typically converges within 12 iterations across a range of dataset sizes. With the case of GMM where the exact conditional posterior  $p_\q(z_b \mid x, z_{-b})$ is tractable, we further verify the convergence of the learned proposals by computing the KL $\mathcal{K}_b(\f)$ defined in equation ~\ref{eq:variational_objective} (see Table \ref{table-gmm} in Appendix~\ref{appendix:table-both-mm}).
+% We employ a variational distribution that updates the global variables $q_\f(\mu, \tau \mid x, c)$ and the local variables $q_\f(c \mid x, \mu, \tau)$, using point-wise neural sufficient statistics modeled after the ones in the analytical updates (see Appendix \ref{appendix:arch-gmm} for architecture and training details). 
+We compare the APG sampler to samples from a standard encoder with MLP and LSTM architectures trained by RWS (see Appendix \ref{appendix:arch-gmm} for architecture and training details). Figure \ref{samples-gmm} shows that RWS encoder fails to propose reasonable clusters, whereas the APG sampler typically converges within 12 iterations across a range of dataset sizes. With the case of GMM where the exact conditional posterior  $p_\q(z_b \mid x, z_{-b})$ is tractable, we further verify the convergence of the learned proposals by computing the KL $\mathcal{K}_b(\f)$ defined in equation ~\ref{eq:variational_objective} (see Appendix~\ref{appendix:table-both-mm}).
 
 % \begin{figure}[t!]
 %   \centering
@@ -657,10 +655,10 @@ As a mean of comparing the performance of APG samplers for varying numbers of sw
   \caption{Inferred digit trajectories and reconstructions for $D = 5$ digits for $T = 15$.}
   \label{mnist-qualitative}
 \end{figure*}
-Finally, we apply the APG sampler to a time series model that is trained with short timescales, and evaluate its performance with longer timescales and larger numbers of latent variables.
+Finally, we apply the APG sampler to a time series model that is trained with short timescales, and evaluate it with longer timescales.
 The data $x_{1:T}$ is a sequence of images of $D$ moving MNIST digits.
 Our generative model consists of global variables $\z_{1:D}^{\mathrm{what}}$ corresponding to digit latent variables and local variables $\z_{1:D, 1:T}^{\mathrm{where}}$ corresponding to the digit trajectories.
-The deep generative model is a state space model that factorizes across digits of the form
+The deep generative model is 
 {\footnotesize
 \begin{align*}
     z^{\mathrm{what}}_{d} 
@@ -693,9 +691,7 @@ The deep generative model is a state space model that factorizes across digits o
 \end{align*}
 }%
 
-Here, ST is a spatial transformer \cite{jaderberg2015spatial} that maps the output of a feedforward decoder $\mu_\q$ that maps logits for a 28$\times$28 MNIST image onto a 96$\times$96 canvas based on the location variable $z^{\mathrm{where}}_{d, t}$. The APG sampler employs $T+1$ blocks which consists of those variables (see Appendix~\ref{appendix:arch-bmnist} for architecture and training details).
-
-At test time, we show that APG sampler can scale up to $T=100$ time steps and $D=5$ digits (see Figure~\ref{mnist-qualitative} and Appendix~\ref{appendix:samples-bmnist}). Qualitatively, we see that the digit trajectories $\z_{1:D, 1:T}^{\mathrm{where}}$ and latent variables $\z_{1:D}^{\mathrm{what}}$ are inferred well.
+where  ST is a spatial transformer \cite{jaderberg2015spatial} (see Appendix~\ref{appendix:st-bmnist} for details).At test time, APG sampler can scale up to $T=100$ time steps and $D=5$ digits (see Figure~\ref{mnist-qualitative} and Appendix~\ref{appendix:samples-bmnist}).
 Furthermore, we compute the mean squared error (see Appendix~\ref{appendix:bmnist-mse}) between the video and its reconstruction for different $T$ and $D$. The results confirm that performance improves with increasing number of Gibbs sweeps $K$.
 \section{Conclusion}
 
@@ -1230,6 +1226,41 @@ We compute the mean squared error between the the video and its reconstruction f
     \label{plot-mse-bmnist}
 \end{figure}
 
+\subsection{Spatial Transformer in Bouncing MNIST}
+\label{appendix:st-bmnist}
+To recap, the deep generative model in bouncing MNIST is 
+{\footnotesize
+\begin{align*}
+    z^{\mathrm{what}}_{d} 
+    \sim 
+    \text{Norm}(0, I)
+    ,
+    \quad
+    z^{\mathrm{where}}_{d, 1} \sim \text{Norm}(0, I)
+    , 
+    \quad
+    z^{\mathrm{where}}_{d, t} 
+    \sim 
+    \text{Norm}(z^{\mathrm{where}}_{d, t - 1}, \sigma^2_0 I) 
+    ,
+    \quad
+    x_t 
+    %| z^\mathrm{where}_{d,t}, z^\mathrm{what}_d 
+    \sim
+    \mathrm{Bern}
+    \Big(
+        \sigma
+        \Big(
+            \sum_{d} \mathrm{ST}
+            \big(
+                \mu_\theta(\z^{\mathrm{what}}_d), 
+                z^{\mathrm{where}}_{d, t}
+            \big)
+        \Big)
+    \Big)
+\end{align*}
+}%
+Here, ST is a spatial transformer \cite{jaderberg2015spatial} that maps the output of a feedforward decoder $\mu_\q$ that maps logits for a 28$\times$28 MNIST image onto a 96$\times$96 canvas based on the location variable $z^{\mathrm{where}}_{d, t}$. The APG sampler employs $T+1$ blocks which consists of those variables (see Appendix~\ref{appendix:arch-bmnist} for architecture and training details).
 \newpage
 \subsection{Qualitative Results in Bouncing MNIST}
 \label{appendix:samples-bmnist}
