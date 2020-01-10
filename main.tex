@@ -196,7 +196,8 @@ Our experiments show that learned proposals converge to the true conditional pos
 \label{sec:amortized-gibbs}
 We are interested in the task of jointly training a generative model $p_\q(x, z)$ by maximizing its marginal likelihood $p_\q(x)$ and learning an inference model $q_\f(z \mid x)$ that approximates the posterior $p_\q(z \mid x)$. 
 % Like most amortized inference approaches, we assume that we can sample from a (possibly implicit) distribution $\hat{p}(\x)$ that either takes the form of an empirical distribution over training data or a data simulator.
-As a means of generating high-quality samplesin an incremental manner, we develop methods that are inspired by EM and classical Gibbs sampling, which perform iterative updates to blocks of variables. We here assume that the latent variables in the generative model decompose into blocks $\z = \{\z_1, \ldots, \z_B\}$ and train proposals $\log q_\f(z_b \mid x, z_{-b})$ that update the variables in a each block $z_{b}$ conditioned on the variables in the remaining blocks $\z_{-b} = z \setminus \{z_b\}$.
+% As a means of generating high-quality samplesin an incremental manner, we develop methods that are inspired by EM and classical Gibbs sampling, which perform iterative updates to blocks of variables.
+We here assume that the latent variables in the generative model decompose into blocks $\z = \{\z_1, \ldots, \z_B\}$ and train proposals $q_\f(z_b \mid x, z_{-b})$ that update the variables in a each block $z_{b}$ conditioned on the variables in the remaining blocks $\z_{-b} = z \setminus \{z_b\}$.
 
 Starting with an initial sample from an encoder $q_\f(\z^{1} \mid \x)$, we will generate a sequence of samples $\{z^1, \ldots, z^K\}$ by performing conditional updates to each block $z_b$, which we refer to as a \emph{sweep}
 \begin{align}
@@ -222,13 +223,16 @@ $
 %     \prod_{k=2}^K
 %     q_\f(z^k \mid \x, z^{k-1}).
 % \end{equation*}
-We want to train proposals that improve the quality of each sample $z^k$ relative to that of the preceding sample $z^{k-1}$. To accomplishing this, we learn a sweep update that leaves the target density \emph{invariant}
-\begin{equation}
-    \label{eq:kernel-invariance}
-    p_\q(\z^k \,|\, \x) = \int \: p_\q(\z^{k-1} \,|\, \x) \: q_\f(\z^k \,|\,\x, \z^{k-1}) d z^{k-1}.
-\end{equation}
+We want to train proposals that improve the quality of each sample $z^k$ relative to that of the preceding sample $z^{k-1}$. To accomplishing this, we need to learn a sweep update that leaves the target density \emph{invariant}
+% \begin{equation}
+%     \label{eq:kernel-invariance}
+%     p_\q(\z^k \,|\, \x) = \int \: p_\q(\z^{k-1} \,|\, \x) \: q_\f(\z^k \,|\,\x, \z^{k-1}) d z^{k-1}.
+% \end{equation}
+$
+p_\q(\z^k \,|\, \x) = \int \: p_\q(\z^{k-1} \,|\, \x) \: q_\f(\z^k \,|\,\x, \z^{k-1}) d z^{k-1}.
+$
 When this condition is met, $q_\f(z^1, \ldots z^K \,|\, x)$ is a Markov Chain whose stationary distribution is the posterior. 
-This means a sweep update learned at training time can be applied at test time to iteratively improve sample quality, without requiring a pre-specified number of updates $K$. In addition, when each single block update $q_\f(z'_b \mid x, z_{-b})$ also leaves the target density invariant,
+This means a sweep update learned at training time can be applied at test time to iteratively improve sample quality, without requiring a pre-specified number of updates $K$. In addition, when each single block update $q_\f(z'_b \mid x, z_{-b})$ also leaves the target density \emph{invariant},
 \begin{align}
     \label{eq:gibbs-invariance}
     p_\q(z'_b, z_{-b} \mid x)
@@ -302,7 +306,7 @@ Approximating the gradient presents a chicken-and-egg problem; we need samples f
 % Moreover, self-normalized importance samplers are consistent, but they are not unbiased. In the early stages of training, we will have poor quality proposals, which means that the bias of the gradient estimators in Equations~\ref{eq:grad-self-normalized} and~\ref{eq:grad-theta} can be high. 
 %If we can improve the quality of the importance sampling mechanism, regardless of the quality of the proposal, then this will improve accuracy of both inference and gradient estimation.
 %may not be able to compute high-quality gradient estimates until we have good proposals, but we will not be able to learn the proposals without high-quality gradient estimates.
-Reweighted wake-sleep (RWS) methods \cite{le2019revisiting} generate proposals from an encoder $q_\f(z \mid x)$ and compute weights $w = p_\q(x, z) / q_\f(z \mid x)$. Since self-normalized importance samplers are biased, the weights can have high variance in models with high-dimensional or correlated latent variables, which in turn implies a high bias of the gradient estimator. To improve upon RWS methods, we use learned proposals to define a sequential Monte Carlo (SMC) sampler \cite{delmoral2006sequential} (\emph{resample-move} SMC), a subclass of SMC methods \cite{doucet2001sequential} that interleave resampling with application of a transition kernel.
+Reweighted wake-sleep (RWS) methods \cite{le2019revisiting} generate proposals from an encoder $q_\f(z \mid x)$ and compute weights $w = p_\q(x, z) / q_\f(z \mid x)$. Since self-normalized importance samplers are biased, the weights can have high variance in models with high-dimensional or correlated latent variables, which in turn implies a high bias of the gradient estimator. To improve upon RWS methods, we use learned proposals to define a sequential Monte Carlo (SMC) sampler \cite{delmoral2006sequential}, a subclass of SMC methods \cite{doucet2001sequential} that interleave resampling with application of a transition kernel.
 
 % SMC methods \cite{doucet2001sequential} combine two basic ideas. The first is sequential importance sampling (SIS), which decomposes a proposal for a sequence of variables into a sequence of conditional proposals. The second is resampling, which selects partial proposals with probability proportional to their weights in order to improve the overall sample quality. SMC \emph{samplers} (see  Algorithm~\ref{alg:smcs}) are a subclass of SMC methods that interleave resampling with the application of a transition kernel, which is also referred to as \emph{resample-move} SMC. 
 
@@ -347,7 +351,6 @@ We now consider a specific sequence of densities $\gamma^k(z^{1:k}):= p_\q(x,z^k
 % \begin{align*}
 %     \gamma^k(z^k) = \int \gamma^k(z^{1:k}) \: dz^{1:k-1} = p_\q(x, z^k).
 % \end{align*}
-
 \begin{algorithm}[!tb]
 \setstretch{1.2}
   \caption{Amortized Population Gibbs Sampling}
@@ -393,18 +396,7 @@ At each step $k$, we can treat the preceding samples $z^{k-1}$ as \emph{auxiliar
          {p_\q(x,z^{k-1}) \: q(z^{k} \mid  z^{k-1})}
     .
 \end{align}
-This construction defines a valid importance sampler for \emph{any} choice of proposal kernel $q(z^k \mid z^{k-1})$ and reverse kernel $r(z^{k-1} \mid z^{k})$. For a given choice of proposal, the \emph{optimal} reverse kernel is
-\begin{align*}
-    r(z^{k-1} \mid  z^k)
-    =   
-    \frac{p_\q(x,z^{k-1})}
-         {p_\q(x,z^k)}
-    q(z^{k} \mid  z^{k-1})
-    .
-\end{align*}
-
-For this choice of kernel, the incremental weights are 1, which minimizes the variance of the weights $w^k$.
-We now use the approximate Gibbs kernel from Equation~\ref{eq:approx-gibbs-kernel} as both the forward and the reverse kernel $q(z^{k} \mid  z^{k-1}) = r(z^{k-1} \mid  z^k) = q_\f(z^k \mid x, z^{k-1})$. When the approximate Gibbs kernel converges to the actual Gibbs kernel, this choice becomes optimal, since the kernel will satisfy detailed balance $p_\q(x, z^k)\,q_\f(z^{k-1} \,|\, x, z^{k}) = p_\q(x, z^{k-1})\,q_\f(z^{k} \,|\, x, z^{k-1})$.
+This construction defines a valid importance sampler for \emph{any} choice of proposal kernel $q(z^k \mid z^{k-1})$ and reverse kernel $r(z^{k-1} \mid z^{k})$. For a given choice of proposal, the \emph{optimal} reverse kernel is $r(z^{k-1} \mid  z^k) = p_\q(x,z^{k-1}) q(z^{k} \mid  z^{k-1}) / p_\q(x,z^k)$, which minimizes the variance of the weights $w^k$. We now use the kernel Equation~\ref{eq:approx-gibbs-kernel} as both the forward and the reverse kernel $q(z^{k} \mid  z^{k-1}) = r(z^{k-1} \mid  z^k) = q_\f(z^k \mid x, z^{k-1})$. When it converges to the actual Gibbs kernel, this choice becomes optimal, since the kernel will satisfy detailed balance $p_\q(x, z^k)\,q_\f(z^{k-1} \,|\, x, z^{k}) = p_\q(x, z^{k-1})\,q_\f(z^{k} \,|\, x, z^{k-1})$.
 
 In general, the weights $w^k$ in the SIS will have a high variance. Moreover, we are now sampling these same variables $k$ times, i.e., jointly sampling the entire Markov chain during train, thus the variance will increase with $k$.
 To overcome this problem, SMC samplers interleave application of the transition kernel with a \emph{resampling} step (see Algorithm~\ref{alg:resample}), which generates a new set of samples by selecting current samples with replacement, with probability proportional to their weight. 
